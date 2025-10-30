@@ -39,8 +39,7 @@ jobs:
           $parts = $PARENTS -split ' '
           if ($parts.Count -ne 3) {
             Write-Output "❌ The last commit is not a merge from develop. Stopping the workflow."
-            Add-Content -Path $env:GITHUB_ENV -Value "MERGE_FROM_DEVELOP=false"
-            echo "MERGE_FROM_DEVELOP=false" >> $env:GITHUB_ENV
+            "MERGE_FROM_DEVELOP=false" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
             exit 0
           }
 
@@ -56,12 +55,10 @@ jobs:
 
           if ($parent1 -eq $developSHA -or $parent2 -eq $developSHA) {
             Write-Output "✅ The last commit is a merge from develop."
-            # Add-Content -Path $env:GITHUB_ENV -Value "MERGE_FROM_DEVELOP=true"
-            echo "MERGE_FROM_DEVELOP=true" >> $env:GITHUB_ENV
+            "MERGE_FROM_DEVELOP=true" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
           } else {
             Write-Output "❌ The last commit does not contain develop as a parent. Stopping the workflow."
-            # Add-Content -Path $env:GITHUB_ENV -Value "MERGE_FROM_DEVELOP=false"
-            echo "MERGE_FROM_DEVELOP=false" >> $env:GITHUB_ENV
+            "MERGE_FROM_DEVELOP=false" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
             exit 0
           }
       
@@ -73,14 +70,13 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -r requirements.txt || true
           pip install pytest pytest-cov
 
       - name: Install PyInstaller
         run: pip install pyinstaller
 
       - name: Build with PyInstaller
-        run: pyinstaller --onefile --windowed --icon=images/icon.ico --add-data "images;images" excel_to_sql_converter.py
+        run: pyinstaller --onefile --console filemover.py
 
       - name: Get last dev tag
         id: get_tag
@@ -100,8 +96,8 @@ jobs:
           Write-Output "⚠️ Versione che verrà usata --> $releaseVersion"
           $releaseTag = "$releaseVersion"
 
-          echo "release_tag=$releaseTag" >> $env:GITHUB_ENV
-          echo "release_version=$releaseVersion" >> $env:GITHUB_ENV
+          "release_tag=$releaseTag" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+          "release_version=$releaseVersion" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
 
       - name: Create and push tag
         run: |
@@ -132,6 +128,6 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./dist/excel_to_sql_converter.exe
-          asset_name: excel_to_sql_converter.exe
+          asset_path: ./dist/filemover.exe
+          asset_name: filemover.exe
           asset_content_type: application/octet-stream

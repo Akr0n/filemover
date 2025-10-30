@@ -42,22 +42,27 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -r requirements.txt || true
-          pip install -r requirements-dev.txt || true
-          pip install pytest pytest-cov
-          pip install pylint
-      - name: Run tests with coverage
+          pip install pytest pytest-cov flake8 pylint
+      - name: Run syntax check
         run: |
-          python -m pytest test_excel_to_sql_converter.py -v
+          python -m py_compile filemover.py
+      - name: Run flake8 linting
+        run: |
+          flake8 filemover.py --max-line-length=120 --ignore=E501 --output-file=flake8-report.txt || true
       - name: Run pylint
         run: |
-          pylint excel_to_sql_converter.py --output-format=parseable > pylint-report.txt || true
-      - name: Upload coverage & pylint reports
+          pylint filemover.py --output-format=parseable > pylint-report.txt || true
+      - name: Test script functionality
+        run: |
+          python filemover.py --test
+      - name: Upload reports
         uses: actions/upload-artifact@v4
         with:
-          name: reports
+          name: reports-windows
           path: |
+            flake8-report.txt
             pylint-report.txt
+        if: always()
 
   build-linux:
     name: Build & Test (Linux)
@@ -74,15 +79,17 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -r requirements.txt || true
-          pip install -r requirements-dev.txt || true
-          pip install pytest pytest-cov
-      - name: Run tests
+          pip install pytest pytest-cov flake8
+      - name: Run syntax check
         run: |
-          python -m pytest test_excel_to_sql_converter.py -v
-      - name: Upload coverage reports
+          python -m py_compile filemover.py
+      - name: Test script functionality
+        run: |
+          python filemover.py --test
+      - name: Upload test reports
         uses: actions/upload-artifact@v4
         with:
           name: test-reports-linux
           path: |
-            .
+            filemover.py
+        if: always()

@@ -96,8 +96,8 @@ jobs:
           }
           
           # Salva statistiche per il riepilogo
-          echo "ARTIFACTS_DELETED=$DeletedCount" >> $env:GITHUB_ENV
-          echo "ARTIFACTS_SIZE_FREED=$TotalSize" >> $env:GITHUB_ENV
+          "ARTIFACTS_DELETED=$DeletedCount" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+          "ARTIFACTS_SIZE_FREED=$TotalSize" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
           
           Write-Host "📊 Artifacts eliminati: $DeletedCount" -ForegroundColor Magenta
         shell: pwsh
@@ -175,7 +175,7 @@ jobs:
           }
           
           # Salva statistiche per il riepilogo
-          echo "PRERELEASES_DELETED=$PrereleasesDeleted" >> $env:GITHUB_ENV
+          "PRERELEASES_DELETED=$PrereleasesDeleted" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
           
           Write-Host "📊 Pre-releases eliminate: $PrereleasesDeleted" -ForegroundColor Magenta
         shell: pwsh
