@@ -1,11 +1,9 @@
-name: PROD - Build & Release Python Executable for Windows
+name: PROD - Test & Release Python Script
 
 on:
   push:
     branches:
       - main
-    paths:
-      - '**/*.py'
 
 permissions:
   contents: write
@@ -72,11 +70,28 @@ jobs:
           python -m pip install --upgrade pip
           pip install pytest pytest-cov
 
-      - name: Install PyInstaller
-        run: pip install pyinstaller
+      - name: Test script functionality
+        run: |
+          python filemover.py --test
 
-      - name: Build with PyInstaller
-        run: pyinstaller --onefile --console filemover.py
+      - name: Create usage instructions
+        run: |
+          echo "# FileMover - Organizzatore File per Tipo" > USAGE.txt
+          echo "" >> USAGE.txt
+          echo "## Utilizzo:" >> USAGE.txt
+          echo "python filemover.py [cartella] [opzioni]" >> USAGE.txt
+          echo "" >> USAGE.txt
+          echo "## Opzioni:" >> USAGE.txt
+          echo "--test, -t, --dry-run  : Modalità test (non modifica file)" >> USAGE.txt
+          echo "" >> USAGE.txt
+          echo "## Esempi:" >> USAGE.txt
+          echo "python filemover.py                    # Organizza cartella corrente" >> USAGE.txt
+          echo "python filemover.py C:\Download        # Organizza cartella specifica" >> USAGE.txt
+          echo "python filemover.py --test             # Test senza modifiche" >> USAGE.txt
+          echo "" >> USAGE.txt
+          echo "## Requisiti:" >> USAGE.txt
+          echo "- Python 3.7 o superiore" >> USAGE.txt
+          echo "- Nessuna dipendenza esterna richiesta" >> USAGE.txt
 
       - name: Get last dev tag
         id: get_tag
@@ -105,6 +120,22 @@ jobs:
           git config --global user.name "Akr0n"
           git tag ${{ env.release_tag }}
           git push origin ${{ env.release_tag }}
+
+      - name: Fetch tag locally and verify
+        run: |
+          echo "Fetching all tags from remote..."
+          git fetch origin --tags
+          
+          echo "Verifying tag ${{ env.release_tag }} exists locally..."
+          if (git tag --list | Select-String -Pattern "^${{ env.release_tag }}$") {
+            Write-Output "✅ Tag ${{ env.release_tag }} successfully created and available locally"
+          } else {
+            Write-Output "❌ Tag ${{ env.release_tag }} not found locally"
+            exit 1
+          }
+          
+          echo "All local tags:"
+          git tag --list
         
       - name: Generate changelog
         id: changelog
@@ -122,12 +153,22 @@ jobs:
           release_name: Release ${{ env.release_tag }}
           body: ${{ steps.changelog.outputs.changelog }}
 
-      - name: Upload Release Asset
+      - name: Upload Python script as release asset
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./dist/filemover.exe
-          asset_name: filemover.exe
-          asset_content_type: application/octet-stream
+          asset_path: ./filemover.py
+          asset_name: filemover.py
+          asset_content_type: text/plain
+
+      - name: Upload usage instructions as release asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./USAGE.txt
+          asset_name: USAGE.txt
+          asset_content_type: text/plain
