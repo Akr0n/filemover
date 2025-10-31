@@ -250,13 +250,25 @@ def main():
     print("  FILEMOVER - ORGANIZZATORE FILE PER TIPO")
     print("=" * 60)
     
+    # Modalità test
+    test_mode = '-t' in sys.argv or '--test' in sys.argv or '--dry-run' in sys.argv
+    
     # Determina la cartella root
-    if len(sys.argv) > 1 and not sys.argv[1].startswith('-'):
-        root_path = sys.argv[1]
-    else:
-        root_path = input("\nInserisci il percorso della cartella root (Enter per cartella corrente): ").strip()
-        if not root_path:
+    root_path = None
+    for arg in sys.argv[1:]:
+        if not arg.startswith('-'):
+            root_path = arg
+            break
+    
+    if not root_path:
+        # Se siamo in modalità automatica (CI/CD) usa la directory corrente
+        if test_mode or not sys.stdin.isatty():
             root_path = "."
+            print(f"\n[AUTO] Usando directory corrente: {Path('.').resolve()}")
+        else:
+            root_path = input("\nInserisci il percorso della cartella root (Enter per cartella corrente): ").strip()
+            if not root_path:
+                root_path = "."
     
     root_path = Path(root_path).resolve()
     
@@ -277,9 +289,6 @@ def main():
     logging.info("="*60)
     
     print(f"\n[LOG] File di log: {log_file}")
-    
-    # Modalità test
-    test_mode = '-t' in sys.argv or '--test' in sys.argv or '--dry-run' in sys.argv
     
     if test_mode:
         logging.info("Modalità test attivata")
