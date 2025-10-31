@@ -244,43 +244,54 @@ def organize_files(root_path, dry_run=False):
     logging.info(f"OPERAZIONE COMPLETATA - File copiati: {files_copied}, Cartelle eliminate: {dirs_deleted}")
     print("\n[SUCCESS] Organizzazione completata!")
 
-def main():
-    """Funzione principale."""
+def print_header():
+    """Stampa l'header del programma."""
     print("=" * 60)
     print("  FILEMOVER - ORGANIZZATORE FILE PER TIPO")
     print("=" * 60)
-    
-    # Modalità test
+
+def parse_command_line_args():
+    """Analizza gli argomenti da riga di comando e restituisce modalità test e path."""
     test_mode = '-t' in sys.argv or '--test' in sys.argv or '--dry-run' in sys.argv
     
-    # Determina la cartella root
+    # Cerca un path tra gli argomenti
     root_path = None
     for arg in sys.argv[1:]:
         if not arg.startswith('-'):
             root_path = arg
             break
     
-    if not root_path:
-        # Se siamo in modalità automatica (CI/CD) usa la directory corrente
-        if test_mode or not sys.stdin.isatty():
-            root_path = "."
-            print(f"\n[AUTO] Usando directory corrente: {Path('.').resolve()}")
-        else:
-            root_path = input("\nInserisci il percorso della cartella root (Enter per cartella corrente): ").strip()
-            if not root_path:
-                root_path = "."
+    return test_mode, root_path
+
+def get_root_path(test_mode, initial_path):
+    """Determina il path della cartella root da utilizzare."""
+    if initial_path:
+        return initial_path
     
-    root_path = Path(root_path).resolve()
+    # Se siamo in modalità automatica (CI/CD) usa la directory corrente
+    if test_mode or not sys.stdin.isatty():
+        print(f"\n[AUTO] Usando directory corrente: {Path('.').resolve()}")
+        return "."
+    else:
+        root_path = input("\nInserisci il percorso della cartella root (Enter per cartella corrente): ").strip()
+        return root_path if root_path else "."
+
+def validate_root_path(root_path):
+    """Valida che il path sia esistente e sia una directory."""
+    root = Path(root_path).resolve()
     
-    if not root_path.exists():
-        print(f"[ERROR] Il percorso '{root_path}' non esiste!")
+    if not root.exists():
+        print(f"[ERROR] Il percorso '{root}' non esiste!")
         sys.exit(1)
     
-    if not root_path.is_dir():
-        print(f"[ERROR] '{root_path}' non è una cartella!")
+    if not root.is_dir():
+        print(f"[ERROR] '{root}' non è una cartella!")
         sys.exit(1)
     
-    # Setup logging
+    return root
+
+def setup_logging_and_info(root_path, test_mode):
+    """Configura il logging e stampa le informazioni iniziali."""
     log_file = setup_logging()
     logging.info("="*60)
     logging.info("FILEMOVER - Avvio script")
@@ -293,6 +304,10 @@ def main():
     if test_mode:
         logging.info("Modalità test attivata")
     
+    return log_file
+
+def run_organization(root_path, test_mode):
+    """Esegue l'organizzazione dei file con gestione errori."""
     try:
         organize_files(root_path, dry_run=test_mode)
         logging.info("Script terminato con successo")
@@ -304,6 +319,25 @@ def main():
         logging.error(f"Errore fatale: {e}", exc_info=True)
         print(f"\n[ERROR] Errore: {e}")
         sys.exit(1)
+
+def main():
+    """Funzione principale."""
+    print_header()
+    
+    # Analizza argomenti da riga di comando
+    test_mode, initial_path = parse_command_line_args()
+    
+    # Determina la cartella root
+    root_path = get_root_path(test_mode, initial_path)
+    
+    # Valida il path
+    validated_root = validate_root_path(root_path)
+    
+    # Setup logging e informazioni
+    setup_logging_and_info(validated_root, test_mode)
+    
+    # Esegue l'organizzazione
+    run_organization(validated_root, test_mode)
 
 if __name__ == "__main__":
     main()
